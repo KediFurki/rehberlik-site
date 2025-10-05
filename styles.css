@@ -28,3 +28,27 @@ button{padding:8px 16px;border:1px solid var(--line);border-radius:20px;backgrou
 .week:hover{box-shadow:0 10px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
 .resources ul{margin:0;padding-left:18px}
 .resources li{margin:6px 0}
+.topbar {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#fff;
+  border-bottom:1px solid var(--line);
+  padding:12px 20px;
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+
+.nav-right a {
+  text-decoration:none;
+  color:var(--fg);
+  border:1px solid var(--line);
+  padding:6px 14px;
+  border-radius:10px;
+  transition:.2s;
+}
+
+.nav-right a:hover {
+  background:var(--bg);
+}
