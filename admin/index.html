@@ -13,7 +13,11 @@ textarea{min-height:120px}
 .err{color:#c00;margin:8px 0}
 </style>
 </head><body>
-<header class="topbar"><a href="../">← Site</a></header>
+<header class="topbar">
+  <a href="../" target="_blank" rel="noopener">← Site</a>
+  <div class="brand">📚 Italya Rehberlik Takvimi</div>
+  <nav class="nav-right"></nav>
+</header>
 <main class="container">
   <h1>Admin Paneli</h1>
 
@@ -61,6 +65,52 @@ const SUPABASE_URL = "https://itzcgjwfineyyekiaxzx.supabase.co"; // kendi URL'in
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0emNnandmaW5leXlla2lheHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTQ3NDYsImV4cCI6MjA3NTE3MDc0Nn0.ZKn2w3MV5uHn1yaX2_8utmYlTLfeGP7BrntSUWvKrks"; // kendi anon key
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+async function showUser(){
+  const nav = document.querySelector('.nav-right');
+  nav.innerHTML = '';
+
+  const { data:{ user } } = await sb.auth.getUser();
+
+  if (user) {
+    // header sağ tarafı
+    const span = document.createElement('span');
+    span.textContent = '👤 ' + (user.email || 'Admin');
+    span.style.marginRight = '8px';
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Çıkış';
+    btn.style.border = '1px solid #e5e7eb';
+    btn.style.borderRadius = '8px';
+    btn.style.padding = '4px 10px';
+    btn.onclick = async () => { await sb.auth.signOut(); location.href = '../'; };
+
+    nav.append(span, btn);
+
+    // editörü göster, giriş formunu gizle
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('editor').style.display = '';
+  } else {
+    // giriş değilse buton göster
+    const a = document.createElement('a');
+    a.href = '../admin/';
+    a.textContent = 'Giriş';
+    nav.appendChild(a);
+
+    document.getElementById('auth').style.display = '';
+    document.getElementById('editor').style.display = 'none';
+  }
+}
+
+// sayfa açılışında oturumu uygula
+showUser();
+document.getElementById('btnLogin').onclick = async () => {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { document.getElementById('authMsg').textContent = "Giriş hatası: " + error.message; return; }
+  document.getElementById('authMsg').textContent = "Giriş başarılı.";
+  showUser(); // <<< ekle
+};
 // Ay seçenekleri
 const months = [
   {n:1,t:'Ocak'},{n:2,t:'Şubat'},{n:3,t:'Mart'},{n:4,t:'Nisan'},{n:5,t:'Mayıs'},{n:6,t:'Haziran'},
@@ -76,9 +126,8 @@ document.getElementById('btnLogin').onclick=async()=>{
   const password=document.getElementById('password').value;
   const {data,error}=await sb.auth.signInWithPassword({email,password});
   if(error){document.getElementById('authMsg').textContent="Giriş hatası: "+error.message;return;}
-  document.getElementById('auth').style.display='none';
-  document.getElementById('editor').style.display='';
   document.getElementById('authMsg').textContent="Giriş başarılı.";
+  showUser(); // <<< bunu ekle
 };
 
 // PDF yükleme
