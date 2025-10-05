@@ -1,0 +1,30 @@
+:root{
+  --bg:#f6f7fb; --fg:#1f2328; --card:#ffffff; --muted:#6a7380; --line:#e5e7eb;
+  --teal:#06b6d4; --blue:#3b82f6; --orange:#f97316; --purple:#8b5cf6;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font:16px/1.5 system-ui,Segoe UI,Roboto,Arial;color:var(--fg);background:linear-gradient(180deg,#fff, var(--bg))}
+.topbar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:12px 20px}
+.brand{font-weight:700;font-size:18px}
+.container{max-width:1100px;margin:24px auto;padding:0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.card{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px;background:var(--card);
+  border:1px solid var(--line);border-radius:16px;text-decoration:none;color:inherit;transition:.15s}
+.card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.08)}
+.dot{width:96px;height:96px;border-radius:50%;border:6px solid #eef1f5;margin:6px 0}
+.dot-teal{background:var(--teal)} .dot-blue{background:var(--blue)}
+.dot-orange{background:var(--orange)} .dot-purple{background:var(--purple)}
+button{padding:8px 16px;border:1px solid var(--line);border-radius:20px;background:#fff;cursor:pointer}
+.footer{padding:28px;text-align:center;color:var(--muted)}
+
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.item{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;text-decoration:none;color:inherit;transition:.15s}
+.item:hover{box-shadow:0 10px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
+.block{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+
+.week-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.week{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;text-align:center;transition:.15s}
+.week:hover{box-shadow:0 10px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
+.resources ul{margin:0;padding-left:18px}
+.resources li{margin:6px 0}
