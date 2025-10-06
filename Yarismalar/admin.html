@@ -1,0 +1,149 @@
+<!doctype html><html lang="tr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Yarışma Yönetimi</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="icon" href="/favicon.ico?v=1">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.row{display:grid;gap:10px;grid-template-columns:repeat(4,1fr);max-width:760px}
+input,select,textarea,button{padding:10px;border:1px solid #e5e7eb;border-radius:10px}
+textarea{min-height:150px}
+</style>
+</head><body>
+<header class="topbar">
+  <a href="./">← Yarışmalar</a>
+  <div class="brand">📚 Italya Rehberlik Takvimi</div>
+  <nav class="nav-right"><a href="../admin/">Admin</a></nav>
+</header>
+
+<main class="container">
+  <h1>Yarışma Yönetimi</h1>
+
+  <section class="block" id="auth">
+    <div class="row" style="grid-template-columns:1fr 1fr 120px">
+      <input id="email" type="email" placeholder="E-posta">
+      <input id="password" type="password" placeholder="Şifre">
+      <button id="btnLogin">Giriş</button>
+    </div>
+    <div id="authMsg" class="notice"></div>
+  </section>
+
+  <section class="block" id="editor" style="display:none">
+    <div class="row" style="grid-template-columns:1fr 140px">
+      <select id="contest">
+        <option value="altin-paket">Altın Paket</option>
+        <option value="gumus-paket">Gümüş Paket</option>
+        <option value="bronz-paket">Bronz Paket</option>
+        <option value="cetele-yarismasi">Çetele Yarışması</option>
+        <option value="caglayan-dergisi-yarismasi">Çağlayan Dergisi Yarışması</option>
+        <option value="ekstra-yarisma">Ekstra Yarışma</option>
+      </select>
+      <button id="btnLoad">Veriyi Getir</button>
+    </div>
+
+    <input id="title" placeholder="Başlık">
+    <textarea id="content" placeholder="İçerik (satırlar korunur, **kalın** destekli)"></textarea>
+
+    <!-- PDF 1 -->
+    <div class="row" style="grid-template-columns:1fr 140px">
+      <input id="pdf1_url" placeholder="PDF 1 adresi (otomatik dolar)">
+      <input id="pdf1" type="file" accept="application/pdf">
+    </div>
+    <!-- PDF 2 -->
+    <div class="row" style="grid-template-columns:1fr 140px">
+      <input id="pdf2_url" placeholder="PDF 2 adresi (opsiyonel)">
+      <input id="pdf2" type="file" accept="application/pdf">
+    </div>
+    <!-- PDF 3 -->
+    <div class="row" style="grid-template-columns:1fr 140px">
+      <input id="pdf3_url" placeholder="PDF 3 adresi (opsiyonel)">
+      <input id="pdf3" type="file" accept="application/pdf">
+    </div>
+
+    <div class="row" style="grid-template-columns:160px 140px 1fr">
+      <button id="btnSave">Kaydet</button>
+      <div id="msg" class="notice"></div>
+    </div>
+    <div id="err" class="err" style="color:#c00"></div>
+  </section>
+</main>
+
+<script>
+const SUPABASE_URL  = "https://itzcgjwfineyyekiaxzx.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0emNnandmaW5leXlla2lheHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTQ3NDYsImV4cCI6MjA3NTE3MDc0Nn0.ZKn2w3MV5uHn1yaX2_8utmYlTLfeGP7BrntSUWvKrks";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON,{auth:{persistSession:true,autoRefreshToken:true}});
+
+const auth  = document.getElementById('auth');
+const edit  = document.getElementById('editor');
+const msg   = document.getElementById('msg');
+const err   = document.getElementById('err');
+
+function uniquePath(slug,file){
+  const safe = file.name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9.\-]/g,'');
+  return `contests/${slug}/contest-${Date.now()}-${safe}`;
+}
+async function uploadPdf(file, path){
+  const { error } = await sb.storage.from('uploads').upload(path, file, { upsert:true, contentType:'application/pdf' });
+  if(error) throw error;
+  const { data:pub } = sb.storage.from('uploads').getPublicUrl(path);
+  return pub.publicUrl;
+}
+
+async function showUser(){
+  const { data:{ user }} = await sb.auth.getUser();
+  if(user){ auth.style.display='none'; edit.style.display=''; } else { auth.style.display=''; edit.style.display='none'; }
+}
+showUser();
+
+document.getElementById('btnLogin').onclick = async ()=>{
+  const email=document.getElementById('email').value.trim();
+  const password=document.getElementById('password').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ document.getElementById('authMsg').textContent="Hata: "+error.message; return; }
+  document.getElementById('authMsg').textContent="Giriş başarılı."; showUser();
+};
+
+document.getElementById('btnLoad').onclick = async ()=>{
+  const slug = document.getElementById('contest').value;
+  const { data, error } = await sb.from('contests').select('*').eq('slug',slug).maybeSingle();
+  if(error){ err.textContent=error.message; return; }
+  document.getElementById('title').value   = data?.title||'';
+  document.getElementById('content').value = data?.content||'';
+  document.getElementById('pdf1_url').value= data?.pdf1_url||'';
+  document.getElementById('pdf2_url').value= data?.pdf2_url||'';
+  document.getElementById('pdf3_url').value= data?.pdf3_url||'';
+  msg.textContent='Yüklendi.';
+};
+
+document.getElementById('btnSave').onclick = async ()=>{
+  const slug = document.getElementById('contest').value;
+
+  let u1=document.getElementById('pdf1_url').value.trim();
+  let u2=document.getElementById('pdf2_url').value.trim();
+  let u3=document.getElementById('pdf3_url').value.trim();
+
+  try{
+    const f1=document.getElementById('pdf1').files[0];
+    const f2=document.getElementById('pdf2').files[0];
+    const f3=document.getElementById('pdf3').files[0];
+    if(f1) u1 = await uploadPdf(f1, uniquePath(slug,f1));
+    if(f2) u2 = await uploadPdf(f2, uniquePath(slug,f2));
+    if(f3) u3 = await uploadPdf(f3, uniquePath(slug,f3));
+    if(f1) document.getElementById('pdf1_url').value=u1;
+    if(f2) document.getElementById('pdf2_url').value=u2;
+    if(f3) document.getElementById('pdf3_url').value=u3;
+  }catch(e){ err.textContent="PDF yükleme hatası: "+e.message; return; }
+
+  const payload = {
+    slug,
+    title: document.getElementById('title').value.trim(),
+    content: document.getElementById('content').value.trim(),
+    pdf1_url: u1||null, pdf2_url: u2||null, pdf3_url: u3||null
+  };
+
+  const { error } = await sb.from('contests').upsert(payload,{ onConflict:'slug' });
+  if(error){ err.textContent=error.message; return; }
+  msg.textContent='Kaydedildi.';
+};
+</script>
+</body></html>

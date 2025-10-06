@@ -1,0 +1,66 @@
+<!doctype html><html lang="tr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Yarışma Detayı</title>
+<link rel="stylesheet" href="../styles.css">
+<link rel="icon" href="/favicon.ico?v=1">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head><body>
+<header class="topbar">
+  <a href="./">← Yarışmalar</a>
+  <div class="brand">📚 Italya Rehberlik Takvimi</div>
+  <nav class="nav-right"><a href="../admin/">Giriş</a></nav>
+</header>
+
+<main class="container">
+  <h1 id="hdr">Yarışma</h1>
+
+  <section class="block">
+    <h3 id="title">Başlık</h3>
+    <div id="content"></div>
+  </section>
+
+  <section class="block">
+    <h3>Dökümanlar</h3>
+    <ul id="pdfList" class="resources"></ul>
+  </section>
+
+  <div id="msg" class="notice"></div>
+</main>
+
+<script>
+const SUPABASE_URL  = "https://itzcgjwfineyyekiaxzx.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0emNnandmaW5leXlla2lheHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTQ3NDYsImV4cCI6MjA3NTE3MDc0Nn0.ZKn2w3MV5uHn1yaX2_8utmYlTLfeGP7BrntSUWvKrks";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const slug = new URLSearchParams(location.search).get('slug');
+const names = {
+  "altin-paket":"Altın Paket","gumus-paket":"Gümüş Paket","bronz-paket":"Bronz Paket",
+  "cetele-yarismasi":"Çetele Yarışması","caglayan-dergisi-yarismasi":"Çağlayan Dergisi Yarışması",
+  "ekstra-yarisma":"Ekstra Yarışma"
+};
+document.getElementById('hdr').textContent = names[slug] || 'Yarışma';
+
+function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+function toRichHtml(text){
+  let s = escapeHtml(text).replace(/\r\n/g,'\n');
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  return '<p>'+ s.split(/\n{2,}/).map(p=>p.replace(/\n/g,'<br>')).join('</p><p>') + '</p>';
+}
+function cleanName(n){return n.replace(/^contest-\d+-/,'');}
+function nameFromUrl(u){try{ return cleanName(decodeURIComponent(new URL(u).pathname.split('/').pop())); }catch{ return 'PDF'; }}
+
+(async ()=>{
+  if(!slug){ document.getElementById('msg').textContent='Geçersiz adres'; return; }
+
+  const { data, error } = await sb.from('contests').select('*').eq('slug',slug).maybeSingle();
+  if(error){ document.getElementById('msg').textContent='Hata: '+error.message; return; }
+  if(!data){ document.getElementById('msg').textContent='İçerik henüz eklenmemiş.'; return; }
+
+  document.getElementById('title').textContent = data.title || names[slug] || 'Yarışma';
+  document.getElementById('content').innerHTML = toRichHtml(data.content || '');
+
+  const pdfs = [data.pdf1_url, data.pdf2_url, data.pdf3_url].filter(Boolean);
+  document.getElementById('pdfList').innerHTML = pdfs.map(u=>`<li><a target="_blank" rel="noopener" href="${u}">${nameFromUrl(u)}</a></li>`).join('');
+})();
+</script>
+</body></html>

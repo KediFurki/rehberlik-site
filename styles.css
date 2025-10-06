@@ -52,3 +52,41 @@ button{padding:8px 16px;border:1px solid var(--line);border-radius:20px;backgrou
 .nav-right a:hover {
   background:var(--bg);
 }
+.folder-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:18px;
+}
+.folder-card{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  padding:20px 12px;
+}
+.folder-title{font-weight:600}
+.card{display:block;text-decoration:none;color:inherit}
+/* ---- Ana kart görseli ---- */
+.card-head{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 2px;
+}
+
+.hero{
+  width: 120px; height: 120px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 24px rgba(0,0,0,.06);
+  background-size: cover;
+  background-position: center;
+  background-color: #f1f5f9; /* fallback */
+}
+
+/* Görsel eşleştirmeleri (PNG) */
+.hero.ilkokul    { background-image: url("assets/hero-ilkokul.png"); }
+.hero.ortaokul   { background-image: url("assets/hero-ortaokul.png"); }
+.hero.lise       { background-image: url("assets/hero-lise.png"); }
+.hero.universite { background-image: url("assets/hero-universite.png"); }
+.hero.yarisma    { background-image: url("assets/hero-yarisma.png"); }
+
+/* Eski yuvarlakları tamamen devre dışı bırakmak isterseniz: */
+.dot, .dot-teal, .dot-blue, .dot-orange, .dot-purple { display:none !important; }
