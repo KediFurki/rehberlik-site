@@ -1,0 +1,134 @@
+<!doctype html><html lang="tr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checklist • Admin</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.row{display:grid;gap:8px;grid-template-columns:repeat(4,1fr)}
+input,select,button{padding:10px;border:1px solid #e5e7eb;border-radius:10px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{border:1px solid #e5e7eb;padding:8px;text-align:left}
+.notice{color:#0a7}.err{color:#c00}
+</style>
+</head><body>
+<header class="topbar">
+  <a href="../" target="_blank" rel="noopener">← Site</a>
+  <div class="brand">📚 Italya Rehberlik Takvimi</div>
+  <nav class="nav-right"><a href="../admin/">Admin</a></nav>
+</header>
+
+<main class="container">
+  <h1>Checklist Yönetimi</h1>
+
+  <section class="block" id="auth">
+    <div class="row" style="grid-template-columns:1fr 1fr 120px">
+      <input id="email" type="email" placeholder="E-posta">
+      <input id="password" type="password" placeholder="Şifre">
+      <button id="btnLogin">Giriş</button>
+    </div>
+    <div id="authMsg" class="notice"></div>
+  </section>
+
+  <section class="block" id="lead" style="display:none">
+    <div class="row">
+      <select id="level"><option>ilkokul</option><option selected>ortaokul</option><option>lise</option><option>universite</option></select>
+      <select id="year"><option>2025</option><option>2026</option></select>
+      <select id="month"></select>
+      <select id="week"><option>1</option><option>2</option><option>3</option><option>4</option></select>
+    </div>
+
+    <h3>Yeni madde</h3>
+    <div class="row" style="grid-template-columns:1fr 160px 1fr 120px">
+      <input id="item_title" placeholder="Başlık">
+      <select id="item_type"><option>okuma</option><option>video</option><option>pdf</option><option>etkinlik</option><option>diger</option></select>
+      <input id="item_url" placeholder="Açıklama / URL (opsiyonel)">
+      <button id="btnAdd">Ekle</button>
+    </div>
+
+    <h3>Mevcut maddeler</h3>
+    <table>
+      <thead><tr><th>Tür</th><th>Başlık</th><th>Açıklama / URL (opsiyonel)</th><th></th></tr></thead>
+      <tbody id="list"></tbody>
+    </table>
+
+    <div id="msg" class="notice"></div>
+    <div id="err" class="err"></div>
+  </section>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Supabase config (admin/index.html ile aynı olmalı)
+  const URL = "https://itzcgjwfineyyekiaxzx.supabase.co";
+  const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0emNnandmaW5leXlla2lheHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTQ3NDYsImV4cCI6MjA3NTE3MDc0Nn0.ZKn2w3MV5uHn1yaX2_8utmYlTLfeGP7BrntSUWvKrks";
+  const sb = supabase.createClient(URL, KEY, { auth:{persistSession:true,autoRefreshToken:true} });
+
+  // helpers
+  const $ = id => document.getElementById(id);
+  const key = () => ({ level: $('level').value, year:+$('year').value, month:+$('month').value, week:+$('week').value });
+
+  // months
+  const months=[{n:1,t:'Ocak'},{n:2,t:'Şubat'},{n:3,t:'Mart'},{n:4,t:'Nisan'},{n:5,t:'Mayıs'},{n:6,t:'Haziran'},{n:7,t:'Temmuz'},{n:8,t:'Ağustos'},{n:9,t:'Eylül'},{n:10,t:'Ekim'},{n:11,t:'Kasım'},{n:12,t:'Aralık'}];
+  months.forEach(m=>{const o=document.createElement('option');o.value=m.n;o.textContent=m.t;$('month').appendChild(o)});
+  $('month').value = 10;
+
+  async function ensureLead(){
+    const { data:{ user } } = await sb.auth.getUser();
+    if(!user) return false;
+    const { data, error } = await sb.from('app_users').select('role').eq('user_id', user.id).maybeSingle();
+    if(error){ $('authMsg').textContent = error.message; return false; }
+    if(!data || !['lead','admin'].includes(data.role)){ $('authMsg').textContent = 'Yetki yok'; return false; }
+    $('auth').style.display='none';
+    $('lead').style.display='';
+    return true;
+  }
+
+  async function loadItems(){
+    const k = key();
+    const { data, error } = await sb.from('checklist_items')
+      .select('*').eq('level',k.level).eq('year',k.year).eq('month',k.month).eq('week',k.week).order('id');
+    if(error){ $('err').textContent = error.message; return; }
+    const tb = $('list'); tb.innerHTML='';
+    (data||[]).forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td>${r.item_type}</td><td>${r.title}</td><td>${r.url||''}</td>
+                      <td><button data-id="${r.id}">Sil</button></td>`;
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{
+      await sb.from('checklist_items').delete().eq('id',+b.dataset.id); loadItems();
+    });
+  }
+
+  // events
+  $('btnLogin').addEventListener('click', async () => {
+    $('authMsg').textContent = '';
+    const email = $('email').value.trim();
+    const password = $('password').value;
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){ $('authMsg').textContent = error.message; return; }
+    const ok = await ensureLead();
+    if(ok) loadItems();
+  });
+
+  ['level','year','month','week'].forEach(id => $(id).addEventListener('change', loadItems));
+
+  $('btnAdd').addEventListener('click', async () => {
+    $('err').textContent=''; $('msg').textContent='';
+    const k = key();
+    const title = $('item_title').value.trim();
+    const item_type = $('item_type').value;
+    const url = $('item_url').value.trim() || null;
+    if(!title){ $('err').textContent='Başlık zorunlu'; return; }
+    const { error } = await sb.from('checklist_items').insert({ ...k, item_type, title, url });
+    if(error){ $('err').textContent = error.message; return; }
+    $('item_title').value=''; $('item_url').value='';
+    $('msg').textContent='Eklendi.';
+    loadItems();
+  });
+
+  // sayfa açılışında erişimi kontrol et
+  ensureLead().then(ok => { if(ok) loadItems(); });
+});
+</script>
+</body></html>

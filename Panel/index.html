@@ -1,0 +1,165 @@
+<!doctype html><html lang="tr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mentor Paneli</title>
+<link rel="stylesheet" href="../styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.controls{display:grid;gap:8px;grid-template-columns:repeat(5,1fr)}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{border:1px solid #e5e7eb;padding:8px;text-align:left;vertical-align:middle}
+</style>
+</head><body>
+<header class="topbar">
+  <a href="../" target="_blank" rel="noopener">← Site</a>
+  <div class="brand">📚 Italya Rehberlik Takvimi</div>
+  <nav class="nav-right"><a href="../admin/">Admin</a></nav>
+</header>
+
+<main class="container">
+  <h1>Mentor Paneli</h1>
+
+  <section class="block" id="auth">
+    <div class="controls" style="grid-template-columns:1fr 1fr 120px">
+      <input id="email" type="email" placeholder="E-posta">
+      <input id="password" type="password" placeholder="Şifre">
+      <button id="btnLogin">Giriş</button>
+    </div>
+    <div id="authMsg" class="notice"></div>
+  </section>
+
+  <section class="block" id="panel" style="display:none">
+    <div class="controls">
+      <select id="cohort"></select>
+      <select id="level"><option>ilkokul</option><option selected>ortaokul</option><option>lise</option><option>universite</option></select>
+      <select id="year"><option>2025</option><option>2026</option></select>
+      <select id="month"></select>
+      <select id="week"><option>1</option><option>2</option><option>3</option><option>4</option></select>
+    </div>
+
+    <table>
+      <thead><tr id="hdr"><th>Öğrenci</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <div id="msg" class="notice"></div>
+    <div id="err" class="err"></div>
+  </section>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Supabase config (admin sayfasıyla aynı olmalı)
+  const URL="https://itzcgjwfineyyekiaxzx.supabase.co";
+  const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0emNnandmaW5leXlla2lheHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTQ3NDYsImV4cCI6MjA3NTE3MDc0Nn0.ZKn2w3MV5uHn1yaX2_8utmYlTLfeGP7BrntSUWvKrks";
+  const sb = supabase.createClient(URL, KEY, { auth:{persistSession:true,autoRefreshToken:true} });
+
+  const $ = id => document.getElementById(id);
+  const key = ()=>({ cohort_id:+$('cohort').value, level:$('level').value, year:+$('year').value, month:+$('month').value, week:+$('week').value });
+
+  // aylar
+  const months=[{n:1,t:'Ocak'},{n:2,t:'Şubat'},{n:3,t:'Mart'},{n:4,t:'Nisan'},{n:5,t:'Mayıs'},{n:6,t:'Haziran'},{n:7,t:'Temmuz'},{n:8,t:'Ağustos'},{n:9,t:'Eylül'},{n:10,t:'Ekim'},{n:11,t:'Kasım'},{n:12,t:'Aralık'}];
+  months.forEach(m=>{const o=document.createElement('option');o.value=m.n;o.textContent=m.t;$('month').appendChild(o)}); $('month').value=10;
+
+  // login
+  $('btnLogin').addEventListener('click', async ()=>{
+    $('authMsg').textContent='';
+    const {error} = await sb.auth.signInWithPassword({email:$('email').value.trim(), password:$('password').value});
+    if(error){ $('authMsg').textContent=error.message; return; }
+    await showPanel();
+  });
+
+  // açılışta varsa oturumu kullan
+  showPanel();
+
+  async function showPanel(){
+    const {data:{user}} = await sb.auth.getUser();
+    if(!user){ $('panel').style.display='none'; $('auth').style.display=''; return; }
+
+    // header sağ kısım
+    const nav = document.querySelector('.nav-right');
+    nav.innerHTML = '<a href="../admin/">Admin</a>';
+    const span=document.createElement('span'); span.textContent=' 👤 '+(user.email||'Mentor');
+    const btn=document.createElement('button'); btn.textContent='Çıkış'; btn.style.marginLeft='8px';
+    btn.onclick=async()=>{await sb.auth.signOut(); location.reload();};
+    nav.append(span,btn);
+
+    $('auth').style.display='none';
+    $('panel').style.display='';
+
+    await loadCohorts(user.id);
+    await renderTable();
+  }
+
+  async function loadCohorts(userId){
+  const { data, error } = await sb.rpc('api_mentor_cohorts');
+  if (error) { $('err').textContent = error.message; return; }
+  const sel = $('cohort'); sel.innerHTML = '';
+  (data || []).forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = c.name;
+    sel.appendChild(o);
+  });
+}
+
+  ['cohort','level','year','month','week'].forEach(id => $(id).addEventListener('change', renderTable));
+
+  async function renderTable(){
+    $('err').textContent=''; $('msg').textContent='';
+    const k = key(); if(!k.cohort_id) return;
+
+    // maddeler
+    const { data:items, error:e1 } = await sb.from('checklist_items')
+      .select('id,title,item_type').eq('level',k.level).eq('year',k.year).eq('month',k.month).eq('week',k.week).order('id');
+    if(e1){ $('err').textContent=e1.message; return; }
+
+    // öğrenciler
+    const { data:students, error:e2 } =
+  await sb.rpc('api_cohort_students', { p_cohort_id: k.cohort_id });
+if (e2) { $('err').textContent = e2.message; return; }
+
+    // ilerleme
+    const itemIds = items.map(i=>i.id), studentIds = students.map(s=>s.user_id);
+    let doneSet = new Set();
+    if(itemIds.length && studentIds.length){
+      const { data:prog, error:e3 } = await sb.from('checklist_progress')
+        .select('user_id,item_id,completed').in('item_id',itemIds).in('user_id',studentIds);
+      if(e3){ $('err').textContent=e3.message; return; }
+      prog.forEach(p=>{ if(p.completed) doneSet.add(p.user_id+'_'+p.item_id); });
+    }
+
+    // başlık
+    const hdr=$('hdr'); hdr.innerHTML='<th>Öğrenci</th>';
+    items.forEach(i=>{ const th=document.createElement('th'); th.textContent=i.item_type+': '+i.title; hdr.appendChild(th); });
+
+    // satırlar
+    const tbody=$('rows'); tbody.innerHTML='';
+    students.forEach(s=>{
+      const tr=document.createElement('tr');
+      const name=(s.app_users && s.app_users.display_name) ? s.app_users.display_name : (s.user_id.slice(0,8)+'…');
+      const td0=document.createElement('td'); td0.textContent=name; tr.appendChild(td0);
+      items.forEach(i=>{
+        const td=document.createElement('td');
+        const id=s.user_id+'_'+i.id;
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=doneSet.has(id);
+        cb.onchange=()=>toggle(s.user_id,i.id,cb.checked);
+        td.appendChild(cb); tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    if(items.length===0) $('msg').textContent='Bu hafta için checklist yok.';
+    if(students.length===0) $('msg').textContent='Bu cohortta öğrenci yok.';
+  }
+
+  async function toggle(userId,itemId,checked){
+    if(checked){
+      const { error } = await sb.from('checklist_progress').upsert({user_id:userId,item_id:itemId,completed:true});
+      if(error) alert(error.message);
+    }else{
+      const { error } = await sb.from('checklist_progress').update({completed:false}).match({user_id:userId,item_id:itemId});
+      if(error) alert(error.message);
+    }
+  }
+});
+</script>
+</body></html>

@@ -3,8 +3,8 @@
 <title>Admin Paneli</title>
 <link rel="stylesheet" href="../styles.css">
 <link rel="icon" href="/favicon.ico?v=1">
-  <meta name="title" content="İtalya Rehberlik Takvimi">
-<meta name="description" content="İlkokul, ortaokul, lise ve üniversite düzeyleri için aylık rehberlik planları. Ekim 2025 – Aralık 2026 arasında tam müfredat.">
+<meta name="title" content="İtalya Rehberlik Takvimi">
+<meta name="description" content="İlkokul, ortaokul, lise ve üniversite düzeyleri için aylık rehberlik planları. Ekim 2025 – Aralık 2026.">
 <meta property="og:title" content="İtalya Rehberlik Takvimi">
 <meta property="og:description" content="Tüm düzeyler için aylık rehberlik içerikleri ve kaynaklar.">
 <meta property="og:type" content="website">
@@ -26,6 +26,7 @@ textarea{min-height:120px}
   <div class="brand">📚 Italya Rehberlik Takvimi</div>
   <nav class="nav-right"></nav>
 </header>
+
 <main class="container">
   <h1>Admin Paneli</h1>
 
@@ -69,57 +70,68 @@ textarea{min-height:120px}
 </main>
 
 <script>
-const SUPABASE_URL = "https://itzcgjwfineyyekiaxzx.supabase.co"; // kendi URL'ini yaz
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0emNnandmaW5leXlla2lheHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTQ3NDYsImV4cCI6MjA3NTE3MDc0Nn0.ZKn2w3MV5uHn1yaX2_8utmYlTLfeGP7BrntSUWvKrks"; // kendi anon key
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/* ==== Supabase ==== */
+const SUPABASE_URL = "https://itzcgjwfineyyekiaxzx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0emNnandmaW5leXlla2lheHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTQ3NDYsImV4cCI6MjA3NTE3MDc0Nn0.ZKn2w3MV5uHn1yaX2_8utmYlTLfeGP7BrntSUWvKrks";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth:{ persistSession:true, autoRefreshToken:true }
+});
 
+/* ==== Kısa referanslar ==== */
+const nav = document.querySelector('.nav-right');
+const auth = document.getElementById('auth');
+const editor = document.getElementById('editor');
+const authMsg = document.getElementById('authMsg');
+
+/* ==== Nav temel linkler ==== */
+function renderNavBase(){
+  nav.innerHTML = `
+    <a href="../panel/">Mentor Paneli</a>
+    <a href="./checklist.html" style="margin-left:8px">Checklist</a>
+  `;
+}
+
+/* ==== Oturum yönetimi ==== */
 async function showUser(){
-  const nav = document.querySelector('.nav-right');
-  nav.innerHTML = '';
-
+  renderNavBase();
   const { data:{ user } } = await sb.auth.getUser();
 
   if (user) {
-    // header sağ tarafı
     const span = document.createElement('span');
     span.textContent = '👤 ' + (user.email || 'Admin');
-    span.style.marginRight = '8px';
+    span.style.marginLeft = '8px';
 
     const btn = document.createElement('button');
     btn.textContent = 'Çıkış';
-    btn.style.border = '1px solid #e5e7eb';
-    btn.style.borderRadius = '8px';
-    btn.style.padding = '4px 10px';
+    btn.style.marginLeft = '8px';
     btn.onclick = async () => { await sb.auth.signOut(); location.href = '../'; };
 
     nav.append(span, btn);
-
-    // editörü göster, giriş formunu gizle
-    document.getElementById('auth').style.display = 'none';
-    document.getElementById('editor').style.display = '';
+    auth.style.display = 'none';
+    editor.style.display = '';
   } else {
-    // giriş değilse buton göster
     const a = document.createElement('a');
     a.href = '../admin/';
     a.textContent = 'Giriş';
+    a.style.marginLeft = '8px';
     nav.appendChild(a);
-
-    document.getElementById('auth').style.display = '';
-    document.getElementById('editor').style.display = 'none';
+    auth.style.display = '';
+    editor.style.display = 'none';
   }
 }
-
-// sayfa açılışında oturumu uygula
 showUser();
+
+/* ==== Login tek handler ==== */
 document.getElementById('btnLogin').onclick = async () => {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  if (error) { document.getElementById('authMsg').textContent = "Giriş hatası: " + error.message; return; }
-  document.getElementById('authMsg').textContent = "Giriş başarılı.";
-  showUser(); // <<< ekle
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error){ authMsg.textContent = "Giriş hatası: " + error.message; return; }
+  authMsg.textContent = "Giriş başarılı.";
+  showUser();
 };
-// Ay seçenekleri
+
+/* ==== Ay seçenekleri ==== */
 const months = [
   {n:1,t:'Ocak'},{n:2,t:'Şubat'},{n:3,t:'Mart'},{n:4,t:'Nisan'},{n:5,t:'Mayıs'},{n:6,t:'Haziran'},
   {n:7,t:'Temmuz'},{n:8,t:'Ağustos'},{n:9,t:'Eylül'},{n:10,t:'Ekim'},{n:11,t:'Kasım'},{n:12,t:'Aralık'}
@@ -128,64 +140,56 @@ const mSel = document.getElementById('month');
 months.forEach(m=>{const o=document.createElement('option');o.value=m.n;o.textContent=m.t;mSel.appendChild(o)});
 mSel.value=10;
 
-// Giriş
-document.getElementById('btnLogin').onclick=async()=>{
-  const email=document.getElementById('email').value.trim();
-  const password=document.getElementById('password').value;
-  const {data,error}=await sb.auth.signInWithPassword({email,password});
-  if(error){document.getElementById('authMsg').textContent="Giriş hatası: "+error.message;return;}
-  document.getElementById('authMsg').textContent="Giriş başarılı.";
-  showUser(); // <<< bunu ekle
-};
-
-// PDF yükleme
+/* ==== Yardımcılar ==== */
 async function uploadPdf(file,path){
-  const {data,error}=await sb.storage.from('uploads').upload(path,file,{upsert:true,contentType:'application/pdf'});
-  if(error)throw error;
-  const {data:pub}=sb.storage.from('uploads').getPublicUrl(path);
+  const { error } = await sb.storage.from('uploads').upload(path,file,{upsert:true,contentType:'application/pdf'});
+  if(error) throw error;
+  const { data:pub } = sb.storage.from('uploads').getPublicUrl(path);
   return pub.publicUrl;
 }
-
-// Anahtar okuma
 function readKey(){return{
-  level:document.getElementById('level').value,
-  year:parseInt(document.getElementById('year').value),
-  month:parseInt(document.getElementById('month').value),
-  week:parseInt(document.getElementById('week').value)
+  level:level.value, year:parseInt(year.value), month:parseInt(month.value), week:parseInt(week.value)
 };}
+function fillForm(d){
+  title.value=d.title||'';
+  description.value=d.description||'';
+  video_url.value=d.video_url||'';
+  pdf_url.value=d.pdf_url||'';
+}
+function clearForm(){ fillForm({}); }
 
-// Form doldurma / temizleme
-function fillForm(d){document.getElementById('title').value=d.title||'';document.getElementById('description').value=d.description||'';document.getElementById('video_url').value=d.video_url||'';document.getElementById('pdf_url').value=d.pdf_url||'';}
-function clearForm(){fillForm({});}
-
-// Veri yükleme
-document.getElementById('btnLoad').onclick=async()=>{
+/* ==== Getir ==== */
+document.getElementById('btnLoad').onclick = async ()=>{
   const k=readKey();
-  const {data,error}=await sb.from('weeks').select('*')
+  const { data, error } = await sb.from('weeks').select('*')
     .eq('level',k.level).eq('year',k.year).eq('month',k.month).eq('week',k.week).maybeSingle();
-  if(error){document.getElementById('err').textContent=error.message;return;}
-  if(!data){clearForm();document.getElementById('msg').textContent='Kayıt yok. Oluşturabilirsiniz.';return;}
-  fillForm(data);document.getElementById('msg').textContent='Kayıt yüklendi.';
+  if(error){ err.textContent = error.message; return; }
+  if(!data){ clearForm(); msg.textContent='Kayıt yok. Oluşturabilirsiniz.'; return; }
+  fillForm(data); msg.textContent='Kayıt yüklendi.';
 };
 
-// Kaydet
-document.getElementById('btnSave').onclick=async()=>{
+/* ==== Kaydet ==== */
+document.getElementById('btnSave').onclick = async ()=>{
   const k=readKey();
-  const file=document.getElementById('pdf').files[0];
-  let pdf_url=document.getElementById('pdf_url').value.trim();
+  const file = document.getElementById('pdf').files[0];
+  let pdfUrl = pdf_url.value.trim();
+
   if(file){
-    try{pdf_url=await uploadPdf(file,`${k.level}/${k.year}/${k.month}/hafta-${k.week}.pdf`);
-      document.getElementById('pdf_url').value=pdf_url;
-    }catch(e){document.getElementById('err').textContent="PDF yükleme hatası: "+e.message;return;}
+    try{
+      pdfUrl = await uploadPdf(file, `${k.level}/${k.year}/${k.month}/hafta-${k.week}.pdf`);
+      pdf_url.value = pdfUrl;
+    }catch(e){ err.textContent = "PDF yükleme hatası: " + e.message; return; }
   }
-  const payload={level:k.level,year:k.year,month:k.month,week:k.week,
-    title:document.getElementById('title').value.trim(),
-    description:document.getElementById('description').value.trim(),
-    video_url:document.getElementById('video_url').value.trim(),
-    pdf_url};
-  const {error}=await sb.from('weeks').upsert(payload,{onConflict:'level,year,month,week'});
-  if(error){document.getElementById('err').textContent=error.message;return;}
-  document.getElementById('msg').textContent='Kaydedildi.';
+
+  const payload = {
+    level:k.level, year:k.year, month:k.month, week:k.week,
+    title:title.value.trim(), description:description.value.trim(),
+    video_url:video_url.value.trim(), pdf_url:pdfUrl
+  };
+
+  const { error } = await sb.from('weeks').upsert(payload,{ onConflict:'level,year,month,week' });
+  if(error){ err.textContent = error.message; return; }
+  msg.textContent = 'Kaydedildi.';
 };
 </script>
 </body></html>
