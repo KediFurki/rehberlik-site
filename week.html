@@ -23,12 +23,12 @@
 
   <section class="block">
     <h3 id="title">Başlık</h3>
-    <p id="desc"></p>
+    <div id="desc"></div>
   </section>
 
   <section class="block">
     <h3>Kaynaklar</h3>
-    <div id="videoBox" style="margin-bottom:12px;"></div>
+    <div id="videoBox" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;"></div>
     <ul id="pdfList" class="resources"></ul>
   </section>
 
@@ -40,37 +40,30 @@ const SUPABASE_URL = "https://itzcgjwfineyyekiaxzx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0emNnandmaW5leXlla2lheHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTQ3NDYsImV4cCI6MjA3NTE3MDc0Nn0.ZKn2w3MV5uHn1yaX2_8utmYlTLfeGP7BrntSUWvKrks";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ?level=ortaokul&year=2025&month=10&week=1
+// ?level=...&year=...&month=...&week=...
 const q = new URLSearchParams(location.search);
-const level = q.get('level');
-const year  = +q.get('year');
-const month = +q.get('month');
-const week  = +q.get('week');
-
+const level = q.get('level'); const year = +q.get('year'); const month = +q.get('month'); const week = +q.get('week');
 document.getElementById('hdr').textContent = `${level} • ${year} • ${haftaAd(week)}`;
 
 (async ()=>{
-  if(!isValid()){
-    document.getElementById('msg').textContent='Geçersiz adres parametresi.';
-    return;
-  }
+  if(!isValid()){ document.getElementById('msg').textContent='Geçersiz adres parametresi.'; return; }
   const { data, error } = await sb.from('weeks').select('*')
     .eq('level',level).eq('year',year).eq('month',month).eq('week',week).maybeSingle();
-
   if(error){ document.getElementById('msg').textContent='Hata: '+error.message; return; }
   if(!data){ document.getElementById('msg').textContent='Henüz içerik eklenmedi.'; return; }
 
-document.getElementById('title').textContent = data.title || 'Başlık';
-document.getElementById('desc').textContent  = data.description || '';
+  document.getElementById('title').textContent = data.title || 'Başlık';
+  document.getElementById('desc').innerHTML  = toRichHtml(data.description||'');
 
-renderVideo(data.video_url);
+  renderVideo(data.video_url);
+  renderVideo(data.video_url2);
+  renderVideo(data.video_url3);
 
-// en çok 3 pdf
-renderPdfList([data.pdf_url, data.pdf_url2, data.pdf_url3].filter(Boolean));
+  renderPdfList([data.pdf_url, data.pdf_url2, data.pdf_url3].filter(Boolean));
 })();
 
-/* ---------- UI helpers ---------- */
-function haftaAd(w){ return `${w}. Hafta`; }
+/* ---------- helpers ---------- */
+function haftaAd(w){return `${w}. Hafta`;}
 function isValid(){
   return ['ilkokul','ortaokul','lise','universite'].includes(level)
     && (year===2025 || year===2026) && month>=1 && month<=12 && week>=1 && week<=4;
@@ -79,55 +72,45 @@ function youtubeId(u){
   try{
     const url = new URL(u);
     const h = url.hostname.replace(/^www\./,'');
-    if (h === 'youtu.be') return url.pathname.slice(1);
-    if (h === 'youtube.com' || h === 'm.youtube.com'){
-      if (url.searchParams.get('v')) return url.searchParams.get('v');     // watch?v=
-      const p = url.pathname.split('/').filter(Boolean);
-      if (p[0]==='embed' && p[1])  return p[1];                             // /embed/ID
-      if (p[0]==='shorts' && p[1]) return p[1];                             // /shorts/ID
+    if (h==='youtu.be') return url.pathname.slice(1);
+    if (h==='youtube.com' || h==='m.youtube.com'){
+      if (url.searchParams.get('v')) return url.searchParams.get('v');
+      const p=url.pathname.split('/').filter(Boolean);
+      if (p[0]==='embed' && p[1]) return p[1];
+      if (p[0]==='shorts'&& p[1]) return p[1];
     }
   }catch(e){}
   return null;
 }
 function renderVideo(u){
+  if(!u) return;
+  const id = youtubeId(u); if(!id) return;
   const box = document.getElementById('videoBox');
-  box.innerHTML = '';
-  const id = youtubeId(u||'');
-  if(!id) return;
-  box.innerHTML = `
-    <a href="${u}" target="_blank" rel="noopener"
-       style="display:inline-block;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
-      <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="Video"
-           style="display:block;width:360px;height:auto">
-    </a>`;
+  const a = document.createElement('a');
+  a.href=u; a.target='_blank'; a.rel='noopener';
+  a.style.display='inline-block'; a.style.border='1px solid #e5e7eb'; a.style.borderRadius='12px'; a.style.overflow='hidden';
+  a.innerHTML = `<img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="Video" style="display:block;width:360px;height:auto">`;
+  box.appendChild(a);
 }
-function renderVideo(u){
-  const box = document.getElementById('videoBox');
-  box.innerHTML = '';
-  const id = youtubeId(u||'');
-  if(!id) return;
-  box.innerHTML = `
-    <a href="${u}" target="_blank" rel="noopener"
-       style="display:inline-block;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
-      <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="Video"
-           style="display:block;width:360px;height:auto">
-    </a>`;
+function cleanFileName(name){
+  // haftanın ve timestampin eklendiği prefixi kaldır: "hafta-<n>-<ts>-"
+  return name.replace(/^hafta-\d+-\d+-/,'');
 }
 function fileNameFromUrl(u){
-  try { return decodeURIComponent(new URL(u).pathname.split('/').pop()); }
+  try{ const raw = decodeURIComponent(new URL(u).pathname.split('/').pop()); return cleanFileName(raw); }
   catch(e){ return 'PDF'; }
 }
 function renderPdfList(urls){
   const ul = document.getElementById('pdfList');
-  ul.innerHTML = urls.map(u =>
-    `<li><a href="${u}" target="_blank" rel="noopener">${fileNameFromUrl(u)}</a></li>`
-  ).join('');
+  ul.innerHTML = urls.map(u => `<li><a href="${u}" target="_blank" rel="noopener">${fileNameFromUrl(u)}</a></li>`).join('');
 }
-function renderPdfList(urls){
-  const ul = document.getElementById('pdfList');
-  ul.innerHTML = urls.map(u =>
-    `<li><a href="${u}" target="_blank" rel="noopener">${fileNameFromUrl(u)}</a></li>`
-  ).join('');
+function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+function toRichHtml(text){
+  let s = escapeHtml(text).replace(/\r\n/g,'\n');
+  // **kalın**
+  s = s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  // paragraflar: boş satıra göre böl
+  return '<p>'+ s.split(/\n{2,}/).map(p=>p.replace(/\n/g,'<br>')).join('</p><p>') + '</p>';
 }
 </script>
 </body></html>

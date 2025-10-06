@@ -13,7 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 body{background:#f6f7fb}
-form,.row{display:grid;gap:8px;max-width:660px}
+form,.row{display:grid;gap:8px;max-width:760px}
 .row{grid-template-columns:repeat(4,1fr)}
 input,select,textarea,button{padding:10px;border:1px solid #e5e7eb;border-radius:10px}
 textarea{min-height:120px}
@@ -53,20 +53,26 @@ textarea{min-height:120px}
     </div>
 
     <input id="title" placeholder="Konu başlığı">
-    <textarea id="description" placeholder="Açıklama / metin"></textarea>
-    <input id="video_url" placeholder="Video bağlantısı (YouTube vs)">
+    <textarea id="description" placeholder="Açıklama / metin (satır sonları korunur, **kalın** destekli)"></textarea>
+
+    <!-- 2 video -->
+    <input id="video_url"  placeholder="Video 1 bağlantısı (YouTube)">
+    <input id="video_url2" placeholder="Video 2 bağlantısı (opsiyonel)">
+    <input id="video_url3" placeholder="Video 3 bağlantısı (opsiyonel)">
+
+    <!-- 3 PDF -->
     <div class="row" style="grid-template-columns:1fr 140px">
-  <input id="pdf_url"  placeholder="PDF 1 adresi (otomatik dolar)">
-  <input id="pdf" type="file" accept="application/pdf">
-</div>
-<div class="row" style="grid-template-columns:1fr 140px">
-  <input id="pdf_url2" placeholder="PDF 2 adresi (opsiyonel)">
-  <input id="pdf2" type="file" accept="application/pdf">
-</div>
-<div class="row" style="grid-template-columns:1fr 140px">
-  <input id="pdf_url3" placeholder="PDF 3 adresi (opsiyonel)">
-  <input id="pdf3" type="file" accept="application/pdf">
-</div>
+      <input id="pdf_url"  placeholder="PDF 1 adresi (otomatik dolar)">
+      <input id="pdf" type="file" accept="application/pdf">
+    </div>
+    <div class="row" style="grid-template-columns:1fr 140px">
+      <input id="pdf_url2" placeholder="PDF 2 adresi (opsiyonel)">
+      <input id="pdf2" type="file" accept="application/pdf">
+    </div>
+    <div class="row" style="grid-template-columns:1fr 140px">
+      <input id="pdf_url3" placeholder="PDF 3 adresi (opsiyonel)">
+      <input id="pdf3" type="file" accept="application/pdf">
+    </div>
 
     <div class="row" style="grid-template-columns:160px 140px 1fr">
       <button id="btnLoad">Veriyi Getir</button>
@@ -78,138 +84,107 @@ textarea{min-height:120px}
 </main>
 
 <script>
-/* ==== Supabase ==== */
 const SUPABASE_URL = "https://itzcgjwfineyyekiaxzx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0emNnandmaW5leXlla2lheHp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTQ3NDYsImV4cCI6MjA3NTE3MDc0Nn0.ZKn2w3MV5uHn1yaX2_8utmYlTLfeGP7BrntSUWvKrks";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth:{ persistSession:true, autoRefreshToken:true }
-});
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:true,autoRefreshToken:true}});
 
-/* ==== Kısa referanslar ==== */
 const nav = document.querySelector('.nav-right');
 const auth = document.getElementById('auth');
 const editor = document.getElementById('editor');
 const authMsg = document.getElementById('authMsg');
 
-/* ==== Nav ==== */
 function renderNavBase(){
-  nav.innerHTML = `
-    <a href="../panel/">Mentor Paneli</a>
-    <a href="./checklist.html" style="margin-left:8px">Checklist</a>
-  `;
+  nav.innerHTML = `<a href="../panel/">Mentor Paneli</a>
+                   <a href="./checklist.html" style="margin-left:8px">Checklist</a>`;
 }
-
-/* ==== Oturum ==== */
 async function showUser(){
   renderNavBase();
   const { data:{ user } } = await sb.auth.getUser();
-
-  if (user) {
-    const span = document.createElement('span');
-    span.textContent = '👤 ' + (user.email || 'Admin');
-    span.style.marginLeft = '8px';
-
-    const btn = document.createElement('button');
-    btn.textContent = 'Çıkış';
-    btn.style.marginLeft = '8px';
-    btn.onclick = async () => { await sb.auth.signOut(); location.href = '../'; };
-
+  if (user){
+    const span = document.createElement('span'); span.textContent = '👤 '+(user.email||'Admin'); span.style.marginLeft='8px';
+    const btn = document.createElement('button'); btn.textContent='Çıkış'; btn.style.marginLeft='8px'; btn.onclick=async()=>{await sb.auth.signOut(); location.href='../';};
     nav.append(span, btn);
-    auth.style.display = 'none';
-    editor.style.display = '';
-  } else {
-    const a = document.createElement('a');
-    a.href = '../admin/';
-    a.textContent = 'Giriş';
-    a.style.marginLeft = '8px';
+    auth.style.display='none'; editor.style.display='';
+  }else{
+    const a = document.createElement('a'); a.href='../admin/'; a.textContent='Giriş'; a.style.marginLeft='8px';
     nav.appendChild(a);
-    auth.style.display = '';
-    editor.style.display = 'none';
+    auth.style.display=''; editor.style.display='none';
   }
 }
 showUser();
 
-/* ==== Login ==== */
 document.getElementById('btnLogin').onclick = async () => {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const { error } = await sb.auth.signInWithPassword({ email, password });
   if (error){ authMsg.textContent = "Giriş hatası: " + error.message; return; }
-  authMsg.textContent = "Giriş başarılı.";
-  showUser();
+  authMsg.textContent = "Giriş başarılı."; showUser();
 };
 
-/* ==== Ay seçenekleri ==== */
-const months = [
-  {n:1,t:'Ocak'},{n:2,t:'Şubat'},{n:3,t:'Mart'},{n:4,t:'Nisan'},{n:5,t:'Mayıs'},{n:6,t:'Haziran'},
-  {n:7,t:'Temmuz'},{n:8,t:'Ağustos'},{n:9,t:'Eylül'},{n:10,t:'Ekim'},{n:11,t:'Kasım'},{n:12,t:'Aralık'}
-];
-const mSel = document.getElementById('month');
-months.forEach(m=>{const o=document.createElement('option');o.value=m.n;o.textContent=m.t;mSel.appendChild(o)});
-mSel.value=10;
+const months=[{n:1,t:'Ocak'},{n:2,t:'Şubat'},{n:3,t:'Mart'},{n:4,t:'Nisan'},{n:5,t:'Mayıs'},{n:6,t:'Haziran'},{n:7,t:'Temmuz'},{n:8,t:'Ağustos'},{n:9,t:'Eylül'},{n:10,t:'Ekim'},{n:11,t:'Kasım'},{n:12,t:'Aralık'}];
+const mSel=document.getElementById('month'); months.forEach(m=>{const o=document.createElement('option');o.value=m.n;o.textContent=m.t;mSel.appendChild(o)}); mSel.value=10;
 
-/* ==== Yardımcılar ==== */
 async function uploadPdf(file,path){
-  const { error } = await sb.storage.from('uploads').upload(path,file,{upsert:true,contentType:'application/pdf'});
+  const { error }=await sb.storage.from('uploads').upload(path,file,{upsert:true,contentType:'application/pdf'});
   if(error) throw error;
   const { data:pub } = sb.storage.from('uploads').getPublicUrl(path);
   return pub.publicUrl;
 }
 function readKey(){return{
-  level:level.value, year:parseInt(year.value), month:parseInt(month.value), week:parseInt(week.value)
+  level:level.value, year:+year.value, month:+month.value, week:+week.value
 };}
 function fillForm(d){
   title.value=d.title||'';
   description.value=d.description||'';
   video_url.value=d.video_url||'';
+  video_url2.value=d.video_url2||'';
+  video_url3.value=d.video_url3||'';
   pdf_url.value=d.pdf_url||'';
-  (document.getElementById('pdf_url2').value = d.pdf_url2 || '');
-  (document.getElementById('pdf_url3').value = d.pdf_url3 || '');
-}
-function uniquePath(k, file){
-  const safe = file.name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9.\-]/g,'');
-  return `${k.level}/${k.year}/${k.month}/hafta-${k.week}-${Date.now()}-${safe}`;
+  document.getElementById('pdf_url2').value=d.pdf_url2||'';
+  document.getElementById('pdf_url3').value=d.pdf_url3||'';
 }
 function clearForm(){ fillForm({}); }
+function uniquePath(k,file){
+  const safe=file.name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9.\-]/g,'');
+  return `${k.level}/${k.year}/${k.month}/hafta-${k.week}-${Date.now()}-${safe}`;
+}
 
-/* ==== Getir ==== */
-document.getElementById('btnLoad').onclick = async ()=>{
+document.getElementById('btnLoad').onclick=async()=>{
   const k=readKey();
   const { data, error } = await sb.from('weeks').select('*')
     .eq('level',k.level).eq('year',k.year).eq('month',k.month).eq('week',k.week).maybeSingle();
-  if(error){ err.textContent = error.message; return; }
+  if(error){ err.textContent=error.message; return; }
   if(!data){ clearForm(); msg.textContent='Kayıt yok. Oluşturabilirsiniz.'; return; }
   fillForm(data); msg.textContent='Kayıt yüklendi.';
 };
 
-/* ==== Kaydet ==== */
-document.getElementById('btnSave').onclick = async ()=>{
+document.getElementById('btnSave').onclick=async()=>{
   const k=readKey();
-
-  const f1 = document.getElementById('pdf').files[0];
-  const f2 = document.getElementById('pdf2').files[0];
-  const f3 = document.getElementById('pdf3').files[0];
-
-  let pdf1 = pdf_url.value.trim();
-  let pdf2 = document.getElementById('pdf_url2').value.trim();
-  let pdf3 = document.getElementById('pdf_url3').value.trim();
+  const f1=document.getElementById('pdf').files[0];
+  const f2=document.getElementById('pdf2').files[0];
+  const f3=document.getElementById('pdf3').files[0];
+  let pdf1=pdf_url.value.trim();
+  let pdf2=document.getElementById('pdf_url2').value.trim();
+  let pdf3=document.getElementById('pdf_url3').value.trim();
 
   try{
-    if(f1){ pdf1 = await uploadPdf(f1, uniquePath(k,f1)); pdf_url.value = pdf1; }
-    if(f2){ pdf2 = await uploadPdf(f2, uniquePath(k,f2)); document.getElementById('pdf_url2').value = pdf2; }
-    if(f3){ pdf3 = await uploadPdf(f3, uniquePath(k,f3)); document.getElementById('pdf_url3').value = pdf3; }
-  }catch(e){ err.textContent = "PDF yükleme hatası: " + e.message; return; }
+    if(f1){ pdf1=await uploadPdf(f1,uniquePath(k,f1)); pdf_url.value=pdf1; }
+    if(f2){ pdf2=await uploadPdf(f2,uniquePath(k,f2)); document.getElementById('pdf_url2').value=pdf2; }
+    if(f3){ pdf3=await uploadPdf(f3,uniquePath(k,f3)); document.getElementById('pdf_url3').value=pdf3; }
+  }catch(e){ err.textContent="PDF yükleme hatası: "+e.message; return; }
 
-  const payload = {
+  const payload={
     level:k.level, year:k.year, month:k.month, week:k.week,
-    title:title.value.trim(), description:description.value.trim(),
+    title:title.value.trim(),
+    description:description.value.trim(),
     video_url:video_url.value.trim(),
-    pdf_url:pdf1 || null, pdf_url2:pdf2 || null, pdf_url3:pdf3 || null
+    video_url2:video_url2.value.trim()||null,
+    pdf_url:pdf1||null, pdf_url2:pdf2||null, pdf_url3:pdf3||null
   };
 
-  const { error } = await sb.from('weeks').upsert(payload,{ onConflict:'level,year,month,week' });
-  if(error){ err.textContent = error.message; return; }
-  msg.textContent = 'Kaydedildi.';
+  const { error }=await sb.from('weeks').upsert(payload,{onConflict:'level,year,month,week'});
+  if(error){ err.textContent=error.message; return; }
+  msg.textContent='Kaydedildi.';
 };
 </script>
 </body></html>

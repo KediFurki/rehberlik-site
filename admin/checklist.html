@@ -1,6 +1,6 @@
 <!doctype html><html lang="tr"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Checklist • Admin</title>
+<title>Çetele • Admin</title>
 <link rel="stylesheet" href="../styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -18,7 +18,7 @@ th,td{border:1px solid #e5e7eb;padding:8px;text-align:left}
 </header>
 
 <main class="container">
-  <h1>Checklist Yönetimi</h1>
+  <h1>Çetele Yönetimi</h1>
 
   <section class="block" id="auth">
     <div class="row" style="grid-template-columns:1fr 1fr 120px">
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadItems(){
     const k = key();
-    const { data, error } = await sb.from('checklist_items')
+    const { data, error } = await sb.from('Çetele_items')
       .select('*').eq('level',k.level).eq('year',k.year).eq('month',k.month).eq('week',k.week).order('id');
     if(error){ $('err').textContent = error.message; return; }
     const tb = $('list'); tb.innerHTML='';
@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tb.appendChild(tr);
     });
     tb.querySelectorAll('button[data-id]').forEach(b=>b.onclick=async()=>{
-      await sb.from('checklist_items').delete().eq('id',+b.dataset.id); loadItems();
+      await sb.from('Çetele_items').delete().eq('id',+b.dataset.id); loadItems();
     });
   }
 
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const item_type = $('item_type').value;
     const url = $('item_url').value.trim() || null;
     if(!title){ $('err').textContent='Başlık zorunlu'; return; }
-    const { error } = await sb.from('checklist_items').insert({ ...k, item_type, title, url });
+    const { error } = await sb.from('Çetele_items').insert({ ...k, item_type, title, url });
     if(error){ $('err').textContent = error.message; return; }
     $('item_title').value=''; $('item_url').value='';
     $('msg').textContent='Eklendi.';
