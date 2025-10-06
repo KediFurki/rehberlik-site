@@ -20,10 +20,18 @@
 
 <main class="container">
   <h1 id="hdr">Hafta</h1>
-  <section class="block"><h3 id="title">Başlık</h3><p id="desc"></p></section>
-  <section class="block"><h3>Kaynaklar</h3>
-    <ul id="links" class="resources"></ul>
+
+  <section class="block">
+    <h3 id="title">Başlık</h3>
+    <p id="desc"></p>
   </section>
+
+  <section class="block">
+    <h3>Kaynaklar</h3>
+    <div id="videoBox" style="margin-bottom:12px;"></div>
+    <ul id="pdfList" class="resources"></ul>
+  </section>
+
   <div id="msg" class="notice"></div>
 </main>
 
@@ -34,27 +42,92 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ?level=ortaokul&year=2025&month=10&week=1
 const q = new URLSearchParams(location.search);
-const level = q.get('level'); const year = +q.get('year'); const month = +q.get('month'); const week = +q.get('week');
+const level = q.get('level');
+const year  = +q.get('year');
+const month = +q.get('month');
+const week  = +q.get('week');
+
 document.getElementById('hdr').textContent = `${level} • ${year} • ${haftaAd(week)}`;
 
 (async ()=>{
-  if(!isValid()){document.getElementById('msg').textContent='Geçersiz adres parametresi.';return;}
+  if(!isValid()){
+    document.getElementById('msg').textContent='Geçersiz adres parametresi.';
+    return;
+  }
   const { data, error } = await sb.from('weeks').select('*')
     .eq('level',level).eq('year',year).eq('month',month).eq('week',week).maybeSingle();
-  if(error){document.getElementById('msg').textContent='Hata: '+error.message;return;}
-  if(!data){document.getElementById('msg').textContent='Henüz içerik eklenmedi.';return;}
-  document.getElementById('title').textContent = data.title || 'Başlık';
-  document.getElementById('desc').textContent  = data.description || '';
-  const ul = document.getElementById('links'); ul.innerHTML='';
-  if (data.video_url) addLink(ul, data.video_url, 'Video');
-  if (data.pdf_url)   addLink(ul, data.pdf_url,   'PDF');
+
+  if(error){ document.getElementById('msg').textContent='Hata: '+error.message; return; }
+  if(!data){ document.getElementById('msg').textContent='Henüz içerik eklenmedi.'; return; }
+
+document.getElementById('title').textContent = data.title || 'Başlık';
+document.getElementById('desc').textContent  = data.description || '';
+
+renderVideo(data.video_url);
+
+// en çok 3 pdf
+renderPdfList([data.pdf_url, data.pdf_url2, data.pdf_url3].filter(Boolean));
 })();
 
-function addLink(ul, href, text){ const li=document.createElement('li'); const a=document.createElement('a'); a.href=href; a.target='_blank'; a.textContent=text; li.appendChild(a); ul.appendChild(li); }
-function haftaAd(w){return `${w}. Hafta`}
+/* ---------- UI helpers ---------- */
+function haftaAd(w){ return `${w}. Hafta`; }
 function isValid(){
   return ['ilkokul','ortaokul','lise','universite'].includes(level)
     && (year===2025 || year===2026) && month>=1 && month<=12 && week>=1 && week<=4;
+}
+function youtubeId(u){
+  try{
+    const url = new URL(u);
+    const h = url.hostname.replace(/^www\./,'');
+    if (h === 'youtu.be') return url.pathname.slice(1);
+    if (h === 'youtube.com' || h === 'm.youtube.com'){
+      if (url.searchParams.get('v')) return url.searchParams.get('v');     // watch?v=
+      const p = url.pathname.split('/').filter(Boolean);
+      if (p[0]==='embed' && p[1])  return p[1];                             // /embed/ID
+      if (p[0]==='shorts' && p[1]) return p[1];                             // /shorts/ID
+    }
+  }catch(e){}
+  return null;
+}
+function renderVideo(u){
+  const box = document.getElementById('videoBox');
+  box.innerHTML = '';
+  const id = youtubeId(u||'');
+  if(!id) return;
+  box.innerHTML = `
+    <a href="${u}" target="_blank" rel="noopener"
+       style="display:inline-block;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+      <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="Video"
+           style="display:block;width:360px;height:auto">
+    </a>`;
+}
+function renderVideo(u){
+  const box = document.getElementById('videoBox');
+  box.innerHTML = '';
+  const id = youtubeId(u||'');
+  if(!id) return;
+  box.innerHTML = `
+    <a href="${u}" target="_blank" rel="noopener"
+       style="display:inline-block;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+      <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="Video"
+           style="display:block;width:360px;height:auto">
+    </a>`;
+}
+function fileNameFromUrl(u){
+  try { return decodeURIComponent(new URL(u).pathname.split('/').pop()); }
+  catch(e){ return 'PDF'; }
+}
+function renderPdfList(urls){
+  const ul = document.getElementById('pdfList');
+  ul.innerHTML = urls.map(u =>
+    `<li><a href="${u}" target="_blank" rel="noopener">${fileNameFromUrl(u)}</a></li>`
+  ).join('');
+}
+function renderPdfList(urls){
+  const ul = document.getElementById('pdfList');
+  ul.innerHTML = urls.map(u =>
+    `<li><a href="${u}" target="_blank" rel="noopener">${fileNameFromUrl(u)}</a></li>`
+  ).join('');
 }
 </script>
 </body></html>
