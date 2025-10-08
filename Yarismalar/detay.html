@@ -59,7 +59,7 @@ function nameFromUrl(u){try{ return cleanName(decodeURIComponent(new URL(u).path
   document.getElementById('title').textContent = data.title || names[slug] || 'Yarışma';
   document.getElementById('content').innerHTML = toRichHtml(data.content || '');
 
-  const pdfs = [data.pdf1_url, data.pdf2_url, data.pdf3_url].filter(Boolean);
+  const pdfs = [data.pdf1_url, data.pdf2_url, data.pdf3_url,data.pdf4_url].filter(Boolean);
   document.getElementById('pdfList').innerHTML = pdfs.map(u=>`<li><a target="_blank" rel="noopener" href="${u}">${nameFromUrl(u)}</a></li>`).join('');
 })();
 </script>

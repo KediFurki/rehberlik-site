@@ -59,6 +59,10 @@ textarea{min-height:150px}
       <input id="pdf3_url" placeholder="PDF 3 adresi (opsiyonel)">
       <input id="pdf3" type="file" accept="application/pdf">
     </div>
+    <div class="row" style="grid-template-columns:1fr 140px">
+      <input id="pdf4_url" placeholder="PDF 4 adresi (opsiyonel)">
+      <input id="pdf4" type="file" accept="application/pdf">
+    </div>
 
     <div class="row" style="grid-template-columns:160px 140px 1fr">
       <button id="btnSave">Kaydet</button>
@@ -112,6 +116,7 @@ document.getElementById('btnLoad').onclick = async ()=>{
   document.getElementById('pdf1_url').value= data?.pdf1_url||'';
   document.getElementById('pdf2_url').value= data?.pdf2_url||'';
   document.getElementById('pdf3_url').value= data?.pdf3_url||'';
+  document.getElementById('pdf4_url').value= data?.pdf4_url||'';
   msg.textContent='Yüklendi.';
 };
 
@@ -121,24 +126,28 @@ document.getElementById('btnSave').onclick = async ()=>{
   let u1=document.getElementById('pdf1_url').value.trim();
   let u2=document.getElementById('pdf2_url').value.trim();
   let u3=document.getElementById('pdf3_url').value.trim();
+  let u4=document.getElementById('pdf4_url').value.trim();
 
   try{
     const f1=document.getElementById('pdf1').files[0];
     const f2=document.getElementById('pdf2').files[0];
     const f3=document.getElementById('pdf3').files[0];
+    const f4=document.getElementById('pdf4').files[0];
     if(f1) u1 = await uploadPdf(f1, uniquePath(slug,f1));
     if(f2) u2 = await uploadPdf(f2, uniquePath(slug,f2));
     if(f3) u3 = await uploadPdf(f3, uniquePath(slug,f3));
+    if(f4) u4 = await uploadPdf(f4, uniquePath(slug,f4));
     if(f1) document.getElementById('pdf1_url').value=u1;
     if(f2) document.getElementById('pdf2_url').value=u2;
     if(f3) document.getElementById('pdf3_url').value=u3;
+    if(f4) document.getElementById('pdf4_url').value=u4;
   }catch(e){ err.textContent="PDF yükleme hatası: "+e.message; return; }
 
   const payload = {
     slug,
     title: document.getElementById('title').value.trim(),
     content: document.getElementById('content').value.trim(),
-    pdf1_url: u1||null, pdf2_url: u2||null, pdf3_url: u3||null
+    pdf1_url: u1||null, pdf2_url: u2||null, pdf3_url: u3||null, pdf4_url: u4||null
   };
 
   const { error } = await sb.from('contests').upsert(payload,{ onConflict:'slug' });
